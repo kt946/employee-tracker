@@ -126,6 +126,65 @@ const addDepartment = () => {
     })
 }
 
+// function to add a role
+const addRole = () => {
+    // set up array for department names
+    const deptArray = [];
+    // get departments, destructure rows, push to array
+    db.promise().query(`SELECT * FROM departments`)
+    .then( ([rows, fields])  => {
+        for ( let i = 0; i < rows.length; i++) {
+            const { [i]: deptData } = rows;
+            deptArray.push(deptData.name);
+        }
+    })
+    .then( () => {
+        // prompt user for role name, salary, department
+        return inquirer.prompt([
+            {
+                type: 'input',
+                name: 'role',
+                message: 'What is the name of the role?',
+                validate: roleInput => {
+                    if (roleInput) {
+                        return true;
+                    } else {
+                        console.log('Please enter a valid role name!');
+                        return false;
+                    }
+                }
+            },
+            {
+                type: 'number',
+                name: 'salary',
+                message: 'What is the salary of the role?'
+            },
+            {
+                type: 'list',
+                name: 'department',
+                message: 'Which department does the role belong to?',
+                choices: deptArray
+            }
+        ])
+    })
+    .then(input => {
+        // get index of department name, index corresponds to department id
+        const index = deptArray.indexOf(input.department) + 1;
+        // set user input as parameter for query
+        const params = [input.role, input.salary, index];
+        const query = `INSERT INTO roles (title, salary, department_id)
+                        VALUES (?,?,?)`;
+        db.promise().query(query, params)
+        .then( () => {
+            console.log(`Added ${input.role} to the database.`);
+            promptUser();
+        });
+    })
+    .catch(err => {
+        throw err;
+    });
+}
+
 // prompt for menu with list of choices
 const promptUser = () => {
     return inquirer.prompt(menu)
@@ -144,7 +203,7 @@ const promptUser = () => {
                 addDepartment();
                 break;
             case 'Add Role':
-                console.log('Add Role');
+                addRole();
                 break;
             case 'Add Employee':
                 console.log('Add Employee');
