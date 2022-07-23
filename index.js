@@ -42,13 +42,13 @@ const menu = [
 // function to view all departments
 const viewDepartments = () => {
     const query = `SELECT * FROM departments`;
-    db.query(query, (err, results) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        console.table(results);
+    db.promise().query(query)
+    .then( ([rows, fields]) => {
+        console.table(rows);
         promptUser();
+    })
+    .catch(err => {
+        throw err;
     });
 };
 
@@ -59,13 +59,13 @@ const viewRoles = () => {
                     FROM roles
                     LEFT JOIN departments
                     ON roles.department_id = departments.id`;
-    db.query(query, (err, results) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        console.table(results);
+    db.promise().query(query)
+    .then( ([rows, fields]) => {
+        console.table(rows);
         promptUser();
+    })
+    .catch(err => {
+        throw err;
     });
 };
 
@@ -79,13 +79,13 @@ const viewEmployees = () => {
                     INNER JOIN roles ON roles.id = employees.role_id
                     INNER JOIN departments ON roles.department_id = departments.id
                     LEFT JOIN employees manager ON employees.manager_id = manager.id`;
-    db.query(query, (err, results) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        console.table(results);
+    db.promise().query(query)
+    .then( ([rows, fields]) => {
+        console.table(rows);
         promptUser();
+    })
+    .catch(err => {
+        throw err;
     });
 };
 
@@ -93,7 +93,7 @@ const viewEmployees = () => {
 const promptUser = () => {
     return inquirer.prompt(menu)
     .then(menu => {
-        console.log(menu);
+        console.log('\n');
         switch (menu.selection) {
             case 'View All Departments':
                 viewDepartments();
