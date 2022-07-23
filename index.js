@@ -44,6 +44,7 @@ const viewDepartments = () => {
     const query = `SELECT * FROM departments`;
     db.promise().query(query)
     .then( ([rows, fields]) => {
+        console.log('\n');
         console.table(rows);
         promptUser();
     })
@@ -61,6 +62,7 @@ const viewRoles = () => {
                     ON roles.department_id = departments.id`;
     db.promise().query(query)
     .then( ([rows, fields]) => {
+        console.log('\n');
         console.table(rows);
         promptUser();
     })
@@ -81,6 +83,7 @@ const viewEmployees = () => {
                     LEFT JOIN employees manager ON employees.manager_id = manager.id`;
     db.promise().query(query)
     .then( ([rows, fields]) => {
+        console.log('\n');
         console.table(rows);
         promptUser();
     })
@@ -89,11 +92,44 @@ const viewEmployees = () => {
     });
 };
 
+// function to add a department
+const addDepartment = () => {
+    // prompt user for department name
+    return inquirer.prompt([
+        {
+            type: 'input',
+            name: 'department',
+            message: 'What is the name of the department?',
+            validate: departmentInput => {
+                if (departmentInput) {
+                    return true;
+                } else {
+                    console.log('Please enter a valid department name!');
+                    return false;
+                }
+            }
+        }
+    ])
+    .then(input => {
+        // set user input as parameter for query
+        const params = input.department;
+        const query = `INSERT INTO departments (name)
+                        VALUES (?)`;
+        db.promise().query(query, params)
+        .then( () => {
+            console.log(`Added ${params} to the database.`);
+            promptUser();
+        })
+        .catch(err => {
+            throw err;
+        });
+    })
+}
+
 // prompt for menu with list of choices
 const promptUser = () => {
     return inquirer.prompt(menu)
     .then(menu => {
-        console.log('\n');
         switch (menu.selection) {
             case 'View All Departments':
                 viewDepartments();
@@ -105,7 +141,7 @@ const promptUser = () => {
                 viewEmployees();
                 break;
             case 'Add Department':
-                console.log('Add Department');
+                addDepartment();
                 break;
             case 'Add Role':
                 console.log('Add Role');
