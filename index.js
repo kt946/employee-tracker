@@ -12,7 +12,12 @@ const db = mysql.createConnection(
         password: 'IamRoot!',
         database: 'company'
     },
-    console.log('Connected to the company database.')
+    console.log('Connected to the company database.'),
+    console.log(`
+        ================
+        Employee Manager
+        ================
+    `)
 );
 
 // menu questions
@@ -34,6 +39,7 @@ const menu = [
     }
 ];
 
+// function to view all departments
 const viewDepartments = () => {
     const query = `SELECT * FROM departments`;
     db.query(query, (err, results) => {
@@ -42,9 +48,11 @@ const viewDepartments = () => {
             return;
         }
         console.table(results);
+        promptUser();
     });
 };
 
+// function to view all roles
 const viewRoles = () => {
     const query = `SELECT roles.id, roles.title, 
                     departments.name AS department, roles.salary 
@@ -57,20 +65,32 @@ const viewRoles = () => {
             return;
         }
         console.table(results);
+        promptUser();
     });
 };
 
+// function to view all employees
 const viewEmployees = () => {
-    
+    // self referencing foreign key
+    const query = `SELECT employees.id, employees.first_name, employees.last_name,
+                    roles.title, departments.name AS department, roles.salary, 
+                    CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
+                    FROM employees
+                    INNER JOIN roles ON roles.id = employees.role_id
+                    INNER JOIN departments ON roles.department_id = departments.id
+                    LEFT JOIN employees manager ON employees.manager_id = manager.id`;
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        console.table(results);
+        promptUser();
+    });
 };
 
 // prompt for menu with list of choices
 const promptUser = () => {
-    console.log(`
-        ================
-        Employee Manager
-        ================
-    `);
     return inquirer.prompt(menu)
     .then(menu => {
         console.log(menu);
@@ -97,7 +117,8 @@ const promptUser = () => {
                 console.log('Update Employee Role');
                 break;
             case 'Quit':
-                break;
+                // exit from node.js
+                process.exit(1);
         };
     })
 };
