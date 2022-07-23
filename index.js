@@ -1,6 +1,6 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
-const cTable = require('console.table')
+const cTable = require('console.table');
 
 // Connect to database
 const db = mysql.createConnection(
@@ -34,6 +34,36 @@ const menu = [
     }
 ];
 
+const viewDepartments = () => {
+    const query = `SELECT * FROM departments`;
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        console.table(results);
+    });
+};
+
+const viewRoles = () => {
+    const query = `SELECT roles.id, roles.title, 
+                    departments.name AS department, roles.salary 
+                    FROM roles
+                    LEFT JOIN departments
+                    ON roles.department_id = departments.id`;
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+            return;
+        }
+        console.table(results);
+    });
+};
+
+const viewEmployees = () => {
+    
+};
+
 // prompt for menu with list of choices
 const promptUser = () => {
     console.log(`
@@ -46,18 +76,26 @@ const promptUser = () => {
         console.log(menu);
         switch (menu.selection) {
             case 'View All Departments':
-                console.log('Departments');
+                viewDepartments();
                 break;
             case 'View All Roles':
-                console.log('Roles');
+                viewRoles();
                 break;
             case 'View All Employees':
-                console.log('Employees');
+                viewEmployees();
                 break;
-            /*case 'Add Department':
-            case 'Add Role': 
+            case 'Add Department':
+                console.log('Add Department');
+                break;
+            case 'Add Role':
+                console.log('Add Role');
+                break;
             case 'Add Employee':
-            case 'Update Employee Role':*/
+                console.log('Add Employee');
+                break;
+            case 'Update Employee Role':
+                console.log('Update Employee Role');
+                break;
             case 'Quit':
                 break;
         };
