@@ -43,7 +43,7 @@ const menu = [
 const viewDepartments = () => {
     const query = `SELECT * FROM departments`;
     db.promise().query(query)
-    .then( ([rows, fields]) => {
+    .then(([rows, fields]) => {
         console.log('\n');
         console.table(rows);
         promptUser();
@@ -61,7 +61,7 @@ const viewRoles = () => {
                     LEFT JOIN departments
                     ON roles.department_id = departments.id`;
     db.promise().query(query)
-    .then( ([rows, fields]) => {
+    .then(([rows, fields]) => {
         console.log('\n');
         console.table(rows);
         promptUser();
@@ -82,7 +82,7 @@ const viewEmployees = () => {
                     INNER JOIN departments ON roles.department_id = departments.id
                     LEFT JOIN employees manager ON employees.manager_id = manager.id`;
     db.promise().query(query)
-    .then( ([rows, fields]) => {
+    .then(([rows, fields]) => {
         console.log('\n');
         console.table(rows);
         promptUser();
@@ -116,7 +116,7 @@ const addDepartment = () => {
         const query = `INSERT INTO departments (name)
                         VALUES (?)`;
         db.promise().query(query, params)
-        .then( () => {
+        .then(() => {
             console.log(`Added ${params} to the database.`);
             promptUser();
         })
@@ -128,17 +128,13 @@ const addDepartment = () => {
 
 // function to add a role
 const addRole = () => {
-    // set up array for department names
-    const deptArray = [];
-    // get departments, destructure rows, push to array
+    // set up results array for department id and names
+    const resultsArray = [];
+    // get all departments,  push results to array
     db.promise().query(`SELECT * FROM departments`)
-    .then( ([rows, fields])  => {
-        for ( let i = 0; i < rows.length; i++) {
-            const { [i]: deptData } = rows;
-            deptArray.push(deptData.name);
-        }
-    })
-    .then( () => {
+    .then(([rows, fields])  => {
+        // push to array to find id for department after prompt
+        resultsArray.push(...rows);
         // prompt user for role name, salary, department
         return inquirer.prompt([
             {
@@ -163,26 +159,32 @@ const addRole = () => {
                 type: 'list',
                 name: 'department',
                 message: 'Which department does the role belong to?',
-                choices: deptArray
+                // print all department names from array of objects from query
+                choices: rows.map(({name}) => name)
             }
         ])
-    })
-    .then(input => {
-        // get index of department name, index corresponds to department id
-        const index = deptArray.indexOf(input.department) + 1;
-        // set user input as parameter for query
-        const params = [input.role, input.salary, index];
-        const query = `INSERT INTO roles (title, salary, department_id)
-                        VALUES (?,?,?)`;
-        db.promise().query(query, params)
-        .then( () => {
-            console.log(`Added ${input.role} to the database.`);
-            promptUser();
-        });
+        .then(input => {
+            // get index of department name
+            const id = resultsArray.find(results => results.name === input.department).id;
+            // set user input as parameter for query
+            const params = [input.role, input.salary, id];
+            const query = `INSERT INTO roles (title, salary, department_id)
+                            VALUES (?,?,?)`;
+            db.promise().query(query, params)
+            .then(() => {
+                console.log(`Added ${input.role} to the database.`);
+                promptUser();
+            });
+        })
     })
     .catch(err => {
         throw err;
     });
+}
+
+// function to add an employee
+const addEmployee = () => {
+    
 }
 
 // prompt for menu with list of choices
@@ -206,7 +208,7 @@ const promptUser = () => {
                 addRole();
                 break;
             case 'Add Employee':
-                console.log('Add Employee');
+                addEmployee();
                 break;
             case 'Update Employee Role':
                 console.log('Update Employee Role');
