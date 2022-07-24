@@ -122,7 +122,7 @@ const viewEmployees = () => {
                     FROM employees
                     INNER JOIN roles ON roles.id = employees.role_id
                     INNER JOIN departments ON roles.department_id = departments.id
-                    LEFT JOIN employees manager ON employees.manager_id = manager.id
+                    LEFT JOIN employees AS manager ON employees.manager_id = manager.id
                     ORDER BY id`;
     db.promise().query(query)
         .then(([rows, fields]) => {
@@ -258,7 +258,6 @@ const addEmployee = () => {
             return getData('employees');
         })
         .then(results => {
-            console.log(results);
             managerArray.push(...results);
             // print all employee names from array for manager choices
             const managerList = mapArray('employee', results);
@@ -435,18 +434,29 @@ const updateManager = () => {
 };
 
 // function to view employees by manager
-/*const viewByManager = () => {
-    const query = ``;
+const viewByManager = () => {
+    // select manager full name and employee first and last names
+    // // Order by manager last name
+    const query = `SELECT CONCAT(manager.first_name, ' ', manager.last_name) AS manager,
+                    employees.first_name, employees.last_name
+                    FROM employees
+                    INNER JOIN employees manager ON employees.manager_id = manager.id
+                    ORDER BY manager.last_name`;
     db.promise().query(query)
         .then(([rows, fields]) => {
             console.log('\n');
-            console.table(rows);
+            if (!rows.length) {
+                console.log('No Managers Found.');
+                console.log('\n');
+            } else {
+                console.table(rows);
+            }
             promptUser();
         })
         .catch(err => {
             throw err;
         });
-};*/
+};
 
 // function to view employees by department
 const viewByDepartment = () => {
@@ -470,17 +480,24 @@ const viewByDepartment = () => {
             // find department id
             const departmentId = findId('department', departmentsArray, input.department);
             // select only department name and employee first and last names and title
+            // Order by employee last name
             const query = `SELECT departments.name as department, 
                             employees.first_name, employees.last_name,
                             roles.title
                             FROM employees
                             INNER JOIN roles ON employees.role_id = roles.id
                             INNER JOIN departments ON roles.department_id = departments.id
-                            WHERE departments.id = ?`;
+                            WHERE departments.id = ?
+                            ORDER BY employees.last_name`;
             db.promise().query(query, departmentId)
                 .then(([rows, fields]) => {
                     console.log('\n');
-                    console.table(rows);
+                    if (!rows.length) {
+                        console.log('No Employees Found.');
+                        console.log('\n');
+                    } else {
+                        console.table(rows);
+                    }
                     promptUser();
                 })
                 .catch(err => {
@@ -552,9 +569,9 @@ const viewBudget = () => {
         .then(input => {
             // find department id
             const departmentId = findId('department', departmentsArray, input.department);
-            // select only department name and sum of salary
+            // select department name and sum of salary
             // join tables by role ids and department ids
-            const query = `SELECT departments.name as department, SUM(salary) as 'total budget'
+            const query = `SELECT departments.name as department, SUM(salary) as total_budget
                             FROM employees
                             INNER JOIN roles ON employees.role_id = roles.id
                             INNER JOIN departments ON roles.department_id = departments.id
@@ -562,7 +579,13 @@ const viewBudget = () => {
             db.promise().query(query, departmentId)
                 .then(([rows, fields]) => {
                     console.log('\n');
-                    console.table(rows);
+                    const [ result ] = rows;
+                    if (!result.total_budget) {
+                        console.log('No Budget Found.');
+                        console.log('\n');
+                    } else {
+                        console.table(rows);
+                    }
                     promptUser();
                 })
                 .catch(err => {
