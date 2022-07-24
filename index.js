@@ -43,14 +43,14 @@ const menu = [
 const viewDepartments = () => {
     const query = `SELECT * FROM departments ORDER BY id`;
     db.promise().query(query)
-    .then(([rows, fields]) => {
-        console.log('\n');
-        console.table(rows);
-        promptUser();
-    })
-    .catch(err => {
-        throw err;
-    });
+        .then(([rows, fields]) => {
+            console.log('\n');
+            console.table(rows);
+            promptUser();
+        })
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to view all roles
@@ -62,14 +62,14 @@ const viewRoles = () => {
                     ON roles.department_id = departments.id
                     ORDER BY id`;
     db.promise().query(query)
-    .then(([rows, fields]) => {
-        console.log('\n');
-        console.table(rows);
-        promptUser();
-    })
-    .catch(err => {
-        throw err;
-    });
+        .then(([rows, fields]) => {
+            console.log('\n');
+            console.table(rows);
+            promptUser();
+        })
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to view all employees
@@ -84,14 +84,14 @@ const viewEmployees = () => {
                     LEFT JOIN employees manager ON employees.manager_id = manager.id
                     ORDER BY id`;
     db.promise().query(query)
-    .then(([rows, fields]) => {
-        console.log('\n');
-        console.table(rows);
-        promptUser();
-    })
-    .catch(err => {
-        throw err;
-    });
+        .then(([rows, fields]) => {
+            console.log('\n');
+            console.table(rows);
+            promptUser();
+        })
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to add a department
@@ -112,54 +112,57 @@ const addDepartment = () => {
             }
         }
     ])
-    .then(input => {
-        // set user input as parameter for query
-        const params = input.department;
-        const query = `INSERT INTO departments (name)
-                        VALUES (?)`;
-        db.promise().query(query, params)
-        .then(() => {
-            console.log(`Added ${params} to the database.`);
-            promptUser();
+        .then(input => {
+            // set user input as parameter for query
+            const params = input.department;
+            const query = `INSERT INTO departments (name)
+                            VALUES (?)`;
+            db.promise().query(query, params)
+                .then(() => {
+                    console.log(`Added ${params} to the database.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
         })
         .catch(err => {
             throw err;
         });
-    })
 }
 
 // function to get all departments
 const getDepartments = () => {
     return db.promise().query(`SELECT * FROM departments`) 
-    .then(([rows, fields]) => {
-        return rows;
-    })
-    .catch(err => {
-        throw err;
-    });
+        .then(([rows, fields]) => {
+            return rows;
+        })
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to get all roles
 const getRoles = () => {
     return db.promise().query(`SELECT * FROM roles`) 
-    .then(([rows, fields]) => {
-        return rows;
-    })
-    .catch(err => {
-        throw err;
-    });
+        .then(([rows, fields]) => {
+            return rows;
+        })
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to get all employees
 const getEmployees = () => {
     return db.promise().query(`SELECT * FROM employees`)
-    .then(([rows, fields])  => {
-        return rows;
-    })
-    .catch(err => {
-        throw err;
-    });
-}
+        .then(([rows, fields])  => {
+            return rows;
+        })
+        .catch(err => {
+            throw err;
+        });
+};
 
 // function to add a role
 const addRole = () => {
@@ -167,37 +170,40 @@ const addRole = () => {
     const resultsArray = [];
     // get all departments, push results to array
     getDepartments()
-    .then(results => {
-        // push to array to find id for department after prompt
-        resultsArray.push(...results);
-        // prompt user for role name, salary, department
-        return inquirer.prompt([
-            {
-                type: 'input',
-                name: 'role',
-                message: 'What is the name of the role?',
-                validate: roleInput => {
-                    if (roleInput) {
-                        return true;
-                    } else {
-                        console.log('Please enter a valid role name!');
-                        return false;
+        .then(results => {
+            // push to array to find id for department after prompt
+            resultsArray.push(...results);
+        })
+        .then(() => {
+            // prompt user for role name, salary, department
+            return inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'role',
+                    message: 'What is the name of the role?',
+                    validate: roleInput => {
+                        if (roleInput) {
+                            return true;
+                        } else {
+                            console.log('Please enter a valid role name!');
+                            return false;
+                        }
                     }
+                },
+                {
+                    type: 'number',
+                    name: 'salary',
+                    message: 'What is the salary of the role?'
+                },
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: 'Which department does the role belong to?',
+                    // print all department names from array of objects from query
+                    choices: resultsArray.map(({name}) => name)
                 }
-            },
-            {
-                type: 'number',
-                name: 'salary',
-                message: 'What is the salary of the role?'
-            },
-            {
-                type: 'list',
-                name: 'department',
-                message: 'Which department does the role belong to?',
-                // print all department names from array of objects from query
-                choices: results.map(({name}) => name)
-            }
-        ])
+            ])
+        })
         .then(input => {
             // get id of department
             const id = resultsArray.find(results => results.name === input.department).id;
@@ -206,19 +212,18 @@ const addRole = () => {
             const query = `INSERT INTO roles (title, salary, department_id)
                             VALUES (?,?,?)`;
             db.promise().query(query, params)
-            .then(() => {
-                console.log(`Added ${input.role} to the database.`);
-                promptUser();
-            })
-            .catch(err => {
-                throw err;
-            });
-        })
-    })
-    .catch(err => {
-        throw err;
-    });
-}
+                .then(() => {
+                    console.log(`Added ${input.role} to the database.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })   
+        .catch(err => {
+            throw err;
+        });
+};
 
 // function to add an employee
 const addEmployee = () => {
@@ -227,92 +232,143 @@ const addEmployee = () => {
     const managerArray = [];
     // get roles and employees, push results to roles and managers array
     getRoles()
-    .then(results => {
-        roleArray.push(...results);
-    })
-    .then(getEmployees)
-    .then(results => {
-        managerArray.push(...results);
-        // destructure employee names and create array for inquirer choices
-        const managers = managerArray.map(({ first_name , last_name }) => first_name + ' ' + last_name)
-        // add a 'None' option to choices
-        managers.unshift('None');
-        return managers
-    })
-    .then(managers => {
-        return inquirer.prompt([
-            {
-                type: 'input',
-                name: 'first_name',
-                message: "What is the employee's first name?",
-                validate: nameInput => {
-                    if (nameInput) {
-                        return true;
-                    } else {
-                        console.log('Please enter a valid first name!');
-                        return false;
+        .then(results => {
+            roleArray.push(...results);
+        })
+        .then(getEmployees)
+        .then(results => {
+            managerArray.push(...results);
+            // destructure employee names and create array for inquirer choices
+            const managerList = managerArray.map(({ first_name , last_name }) => first_name + ' ' + last_name);
+            // add a 'None' option to choices
+            managerList.unshift('None');
+            return managerList;
+        })
+        .then(managerList => {
+            return inquirer.prompt([
+                {
+                    type: 'input',
+                    name: 'first_name',
+                    message: "What is the employee's first name?",
+                    validate: nameInput => {
+                        if (nameInput) {
+                            return true;
+                        } else {
+                            console.log('Please enter a valid first name!');
+                            return false;
+                        }
                     }
-                }
-            },
-            {
-                type: 'input',
-                name: 'last_name',
-                message: "What is the employee's last name?",
-                validate: nameInput => {
-                    if (nameInput) {
-                        return true;
-                    } else {
-                        console.log('Please enter a valid last name!');
-                        return false;
+                },
+                {
+                    type: 'input',
+                    name: 'last_name',
+                    message: "What is the employee's last name?",
+                    validate: nameInput => {
+                        if (nameInput) {
+                            return true;
+                        } else {
+                            console.log('Please enter a valid last name!');
+                            return false;
+                        }
                     }
+                },
+                {
+                    type: 'list',
+                    name: 'role',
+                    message: "What is the employee's role?",
+                    // print all role titles from array
+                    choices: roleArray.map(({title}) => title)
+                },
+                {
+                    type: 'list',
+                    name: 'manager',
+                    message: "Who is the employee's manager?",
+                    // print all employees including 'None' option
+                    choices: managerList
                 }
-            },
-            {
-                type: 'list',
-                name: 'role',
-                message: "What is the employee's role?",
-                // print all role titles from array
-                choices: roleArray.map(({title}) => title)
-            },
-            {
-                type: 'list',
-                name: 'manager',
-                message: "Who is the employee's manager?",
-                // print all employees including 'None' option
-                choices: managers
-            }
-        ])
-    })
-    .then(input => {
-        // destructure input for first and last name
-        const { first_name, last_name } = input
-        // get id of role
-        const roleId = roleArray.find(role => role.title === input.role).id;
-        // function to get id of manager, null if 'None' is selected
-        const managerId = () => {
-            if (input.manager === 'None') {
-                return null;
-            } else {
-                return managerArray.find(manager => manager.first_name + ' ' + manager.last_name === input.manager).id;
-            }
-        };
-        // set user input as parameters for query
-        const params = [first_name, last_name, roleId, managerId()]
-        const query = `INSERT INTO employees (first_name, last_name, role_id, manager_id)
-                        VALUES (?,?,?,?)`;
-        db.promise().query(query, params)
-        .then(() => {
-            console.log(`Added ${first_name} ${last_name} to the database.`);
-            promptUser();
+            ])
+        })
+        .then(input => {
+            // get id of role
+            const roleId = roleArray.find(role => role.title === input.role).id;
+            // function to get id of manager, null if 'None' is selected
+            const managerId = () => {
+                if (input.manager === 'None') {
+                    return null;
+                } else {
+                    return managerArray.find(manager => manager.first_name + ' ' + manager.last_name === input.manager).id;
+                }
+            };
+            // set user input as parameters for query
+            const params = [input.first_name, input.last_name, roleId, managerId()]
+            const query = `INSERT INTO employees (first_name, last_name, role_id, manager_id)
+                            VALUES (?,?,?,?)`;
+            db.promise().query(query, params)
+                .then(() => {
+                    console.log(`Added ${input.first_name} ${input.last_name} to the database.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
         })
         .catch(err => {
             throw err;
         });
-    })
-    .catch(err => {
-        throw err;
-    });
-}
+};
+
+// function to update employee role
+const updateEmployee = () => {
+    // set up arrays for roles and employees data 
+    const roleArray = [];
+    const employeeArray = [];
+    getRoles()
+        .then(results => {
+            roleArray.push(...results);
+        })
+        .then(getEmployees)
+        .then(results => {
+            employeeArray.push(...results);
+        })
+        .then(() => {
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'employee',
+                    message: "Which employee's role do you want to update?",
+                    // destructure employee names and create array for inquirer choices
+                    choices: employeeArray.map(({ first_name , last_name }) => first_name + ' ' + last_name)
+                },
+                {
+                    type: 'list',
+                    name: 'role',
+                    message: "Which role do you want to assign the selected employee?",
+                    // print all role titles from array
+                    choices: roleArray.map(({title}) => title)
+                },
+            ])
+        })
+        .then(input => {
+            // get ids of employee and role
+            const employeeId = employeeArray.find(employee => employee.first_name + ' ' + employee.last_name === input.employee).id;
+            const roleId = roleArray.find(role => role.title === input.role).id;
+            // set user input as parameters for query
+            const params = [roleId, employeeId];
+            const query = `UPDATE employees SET role_id = ?
+                            WHERE id = ?`;
+            db.promise().query(query, params)
+                .then(() => {
+                    console.log(`Updated ${input.employee}'s role to ${input.role}.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })
+        .catch(err => {
+            throw err;
+        });
+};
 
 // prompt for menu with list of choices
 const promptUser = () => {
@@ -338,7 +394,7 @@ const promptUser = () => {
                 addEmployee();
                 break;
             case 'Update Employee Role':
-                console.log('Update Employee Role');
+                updateEmployee();
                 break;
             case 'Quit':
                 // exit from node.js
