@@ -126,15 +126,48 @@ const addDepartment = () => {
     })
 }
 
+// function to get all departments
+const getDepartments = () => {
+    return db.promise().query(`SELECT * FROM departments`) 
+    .then(([rows, fields]) => {
+        return rows;
+    })
+    .catch(err => {
+        throw err;
+    });
+};
+
+// function to get all roles
+const getRoles = () => {
+    return db.promise().query(`SELECT * FROM roles`) 
+    .then(([rows, fields]) => {
+        return rows;
+    })
+    .catch(err => {
+        throw err;
+    });
+};
+
+// function to get all employees
+const getEmployees = () => {
+    return db.promise().query(`SELECT * FROM employees`)
+    .then(([rows, fields])  => {
+        return rows;
+    })
+    .catch(err => {
+        throw err;
+    });
+}
+
 // function to add a role
 const addRole = () => {
     // set up results array for department id and names
     const resultsArray = [];
     // get all departments,  push results to array
-    db.promise().query(`SELECT * FROM departments`)
-    .then(([rows, fields])  => {
+    getDepartments()
+    .then(results => {
         // push to array to find id for department after prompt
-        resultsArray.push(...rows);
+        resultsArray.push(...results);
         // prompt user for role name, salary, department
         return inquirer.prompt([
             {
@@ -160,13 +193,13 @@ const addRole = () => {
                 name: 'department',
                 message: 'Which department does the role belong to?',
                 // print all department names from array of objects from query
-                choices: rows.map(({name}) => name)
+                choices: results.map(({name}) => name)
             }
         ])
         .then(input => {
             // get index of department name
             const id = resultsArray.find(results => results.name === input.department).id;
-            // set user input as parameter for query
+            // set user input as parameters for query
             const params = [input.role, input.salary, id];
             const query = `INSERT INTO roles (title, salary, department_id)
                             VALUES (?,?,?)`;
@@ -184,7 +217,69 @@ const addRole = () => {
 
 // function to add an employee
 const addEmployee = () => {
-    
+    // set up arrays for roles and managers
+    const roleArray = [];
+    const managerArray = [];
+    // get roles and employees, push results to roles and managers array
+    getRoles()
+    .then(results => {
+        roleArray.push(...results);
+    })
+    .then(getEmployees)
+    .then(results => {
+        managerArray.push(...results);
+        const managers = managerArray.map(({ first_name , last_name }) => first_name + ' ' + last_name)
+        managers.unshift('None');
+        return managers
+    })
+    .then(managers => {
+        return inquirer.prompt([
+            {
+                type: 'input',
+                name: 'first_name',
+                message: "What is the employee's first name?",
+                validate: nameInput => {
+                    if (nameInput) {
+                        return true;
+                    } else {
+                        console.log('Please enter a valid first name!');
+                        return false;
+                    }
+                }
+            },
+            {
+                type: 'input',
+                name: 'last_name',
+                message: "What is the employee's last name?",
+                validate: nameInput => {
+                    if (nameInput) {
+                        return true;
+                    } else {
+                        console.log('Please enter a valid last name!');
+                        return false;
+                    }
+                }
+            },
+            {
+                type: 'list',
+                name: 'role',
+                message: "What is the employee's role?",
+                choices: roleArray.map(({title}) => title)
+            },
+            {
+                type: 'list',
+                name: 'manager',
+                message: "Who is the employee's manager?",
+                choices: managers
+            }
+        ])
+    })
+    .then(input => {
+        console.log(input);
+    })
+    .catch(err => {
+        throw err;
+    });
 }
 
 // prompt for menu with list of choices
