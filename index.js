@@ -20,7 +20,7 @@ const db = mysql.createConnection(
     `)
 );
 
-// menu questions
+// menu question
 const menu = [
     {
         type: 'list',
@@ -34,6 +34,7 @@ const menu = [
             'Add Role',
             'Add Employee', 
             'Update Employee Role',
+            'Update Employee Manager',
             'Quit'
         ]
     }
@@ -238,10 +239,8 @@ const addEmployee = () => {
         .then(getEmployees)
         .then(results => {
             managerArray.push(...results);
-            // destructure employee names and create array for inquirer choices
-            const managerList = managerArray.map(({ first_name , last_name }) => first_name + ' ' + last_name);
-            // add a 'None' option to choices
-            managerList.unshift('None');
+            // destructure employee names and create array for manager choices
+            const managerList = results.map(({ first_name , last_name }) => first_name + ' ' + last_name);
             return managerList;
         })
         .then(managerList => {
@@ -284,7 +283,7 @@ const addEmployee = () => {
                     name: 'manager',
                     message: "Who is the employee's manager?",
                     // print all employees including 'None' option
-                    choices: managerList
+                    choices: ['None', ...managerList]
                 }
             ])
         })
@@ -336,7 +335,7 @@ const updateEmployee = () => {
                     type: 'list',
                     name: 'employee',
                     message: "Which employee's role do you want to update?",
-                    // destructure employee names and create array for inquirer choices
+                    // destructure employee names and create array
                     choices: employeeArray.map(({ first_name , last_name }) => first_name + ' ' + last_name)
                 },
                 {
@@ -359,6 +358,61 @@ const updateEmployee = () => {
             db.promise().query(query, params)
                 .then(() => {
                     console.log(`Updated ${input.employee}'s role to ${input.role}.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })
+        .catch(err => {
+            throw err;
+        });
+};
+
+// function to update employee manager
+const updateManager = () => {
+    // set up arrays for  employees data 
+    const employeeArray = [];
+    getEmployees()
+        .then(results => {
+            employeeArray.push(...results);
+            // destructure employee names and create array for employee choices
+            const employeeList = results.map(({ first_name , last_name }) => first_name + ' ' + last_name);
+            return employeeList;
+        })
+        .then(employeeList => {
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'employee',
+                    message: "Which employee's manager do you want to update?",
+                    choices: employeeList
+                },
+                {
+                    type: 'list',
+                    name: 'manager',
+                    message: "Which manager do you want to assign the selected employee?",
+                    // add a 'None' option to manager choices
+                    choices: ['None', ...employeeList]
+                },
+            ])
+        })
+        .then(input => {
+            // get ids of employee and manager
+            const findId = (arrayData, input) => {
+                if (input === 'None') {
+                    return null;
+                }
+                return arrayData.find(arrayEl => arrayEl.first_name + ' ' + arrayEl.last_name === input).id;
+            }
+            const employeeId = findId(employeeArray, input.employee);
+            const managerId = findId(employeeArray, input.manager);
+            const params = [managerId, employeeId];
+            const query = `UPDATE employees SET manager_id = ?
+                            WHERE id = ?`;
+            db.promise().query(query, params)
+                .then(() => {
+                    console.log(`Updated ${input.employee}'s manager to ${input.manager}.`);
                     promptUser();
                 })
                 .catch(err => {
@@ -395,6 +449,9 @@ const promptUser = () => {
                 break;
             case 'Update Employee Role':
                 updateEmployee();
+                break;
+            case 'Update Employee Manager':
+                updateManager();
                 break;
             case 'Quit':
                 // exit from node.js
