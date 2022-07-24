@@ -172,31 +172,9 @@ const addDepartment = () => {
         });
 }
 
-// function to get all departments
-const getDepartments = () => {
-    return db.promise().query(`SELECT * FROM departments`) 
-        .then(([rows, fields]) => {
-            return rows;
-        })
-        .catch(err => {
-            throw err;
-        });
-};
-
-// function to get all roles
-const getRoles = () => {
-    return db.promise().query(`SELECT * FROM roles`) 
-        .then(([rows, fields]) => {
-            return rows;
-        })
-        .catch(err => {
-            throw err;
-        });
-};
-
-// function to get all employees
-const getEmployees = () => {
-    return db.promise().query(`SELECT * FROM employees`)
+// function to get data from tables
+const getData = (type) => {
+    return db.promise().query(`SELECT * FROM ${type}`)
         .then(([rows, fields])  => {
             return rows;
         })
@@ -210,7 +188,7 @@ const addRole = () => {
     // set up results array for department id and names
     const departmentsArray = [];
     // get all departments, push results to array
-    getDepartments()
+    getData('departments')
         .then(results => {
             // push to array to find id for department after prompt
             departmentsArray.push(...results);
@@ -272,12 +250,15 @@ const addEmployee = () => {
     const roleArray = [];
     const managerArray = [];
     // get roles and employees, push results to roles and managers array
-    getRoles()
+    getData('roles')
         .then(results => {
             roleArray.push(...results);
         })
-        .then(getEmployees)
+        .then(() => {
+            return getData('employees');
+        })
         .then(results => {
+            console.log(results);
             managerArray.push(...results);
             // print all employee names from array for manager choices
             const managerList = mapArray('employee', results);
@@ -354,11 +335,13 @@ const updateEmployee = () => {
     // set up arrays for roles and employees data 
     const roleArray = [];
     const employeeArray = [];
-    getRoles()
+    getData('roles')
         .then(results => {
             roleArray.push(...results);
         })
-        .then(getEmployees)
+        .then(() => {
+            return getData('employees');
+        })
         .then(results => {
             employeeArray.push(...results);
         })
@@ -406,7 +389,7 @@ const updateEmployee = () => {
 const updateManager = () => {
     // set up arrays for  employees data 
     const employeeArray = [];
-    getEmployees()
+    getData('employees')
         .then(results => {
             employeeArray.push(...results);
             // print all employee names from array
@@ -473,17 +456,7 @@ const viewByDepartment = () => {
 // function to delete department, role, or employee
 const deleteFromDatabase = type => {
     const resultsArray = [];
-    const deletionType = type => {
-        switch (type) {
-            case 'department':
-                return getDepartments();
-            case 'role':
-                return getRoles();
-            case 'employee':
-                return getEmployees();
-        }
-    };
-    deletionType(type)
+    getData(`${type}s`)
         .then(results => {
             resultsArray.push(...results);
             return results;
