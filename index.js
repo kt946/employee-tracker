@@ -450,7 +450,46 @@ const updateManager = () => {
 
 // function to view employees by department
 const viewByDepartment = () => {
-
+    const departmentsArray = [];
+    getData('departments')
+        .then(results => {
+            departmentsArray.push(...results);
+        })
+        .then(() => {
+            // prompt user for department to view its employees
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: 'Select a department to view its employees',
+                    choices: mapArray('department', departmentsArray)
+                }
+            ])
+        })
+        .then(input => {
+            // find department id
+            const departmentId = findId('department', departmentsArray, input.department);
+            // select only department name and employee first and last names and title
+            const query = `SELECT departments.name as department, 
+                            employees.first_name, employees.last_name,
+                            roles.title
+                            FROM employees
+                            INNER JOIN roles ON employees.role_id = roles.id
+                            INNER JOIN departments ON roles.department_id = departments.id
+                            WHERE departments.id = ?`;
+            db.promise().query(query, departmentId)
+                .then(([rows, fields]) => {
+                    console.log('\n');
+                    console.table(rows);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })   
+        .catch(err => {
+            throw err;
+        });
 };
 
 // function to delete department, role, or employee
@@ -505,7 +544,7 @@ const viewBudget = () => {
                 {
                     type: 'list',
                     name: 'department',
-                    message: 'Select a department to view its budget',
+                    message: 'Select a department to view its total budget',
                     choices: mapArray('department', departmentsArray)
                 }
             ])
