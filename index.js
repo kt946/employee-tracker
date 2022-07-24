@@ -470,30 +470,39 @@ const viewByDepartment = () => {
 
 };
 
-// function to delete department
-const deleteDepartment = () => {
-    const departmentsArray = [];
-    getDepartments()
+// function to delete department, role, or employee
+const deleteFromDatabase = type => {
+    const resultsArray = [];
+    const deletionType = type => {
+        switch (type) {
+            case 'department':
+                return getDepartments();
+            case 'role':
+                return getRoles();
+            case 'employee':
+                return getEmployees();
+        }
+    };
+    deletionType(type)
         .then(results => {
-            departmentsArray.push(...results);
+            resultsArray.push(...results);
             return results;
         })
         .then(results => {
             return inquirer.prompt([
                 {
                     type: 'list',
-                    name: 'department',
-                    message: "Which department do you want to delete?",
-                    choices: mapArray('department', results)
-                },
+                    name: `delete`,
+                    message: `Which ${type} do you want to delete?`,
+                    choices: mapArray(`${type}`, results)
+                }
             ])
         })
         .then(input => {
-            const departmentId = findId('department', departmentsArray, input.department);
-            const query = `DELETE FROM departments WHERE id = ?`;
-            db.promise().query(query, departmentId)
+            const query = `DELETE FROM ${type}s WHERE id = ?`;
+            db.promise().query(query, findId(`${type}`, resultsArray, input.delete))
                 .then(() => {
-                    console.log(`Deleted ${input.department} from the database.`);
+                    console.log(`Deleted ${input.delete} ${type} from the database.`);
                     promptUser();
                 })
                 .catch(err => {
@@ -541,11 +550,13 @@ const promptUser = () => {
                 viewByDepartment();
                 break;
             case 'Delete Department':
-                deleteDepartment();
+                deleteFromDatabase('department');
                 break;
             case 'Delete Role':
+                deleteFromDatabase('role');
                 break;
             case 'Delete Employee':
+                deleteFromDatabase('employee');
                 break;
             case 'View Total Budget Of Department':
                 break;
