@@ -35,6 +35,12 @@ const menu = [
             'Add Employee', 
             'Update Employee Role',
             'Update Employee Manager',
+            'View Employees By Manager',
+            'View Employees By Department',
+            'Delete Department',
+            'Delete Role',
+            'Delete Employee',
+            'View Total Budget Of Department',
             'Quit'
         ]
     }
@@ -445,6 +451,60 @@ const updateManager = () => {
         });
 };
 
+// function to view employees by manager
+/*const viewByManager = () => {
+    const query = ``;
+    db.promise().query(query)
+        .then(([rows, fields]) => {
+            console.log('\n');
+            console.table(rows);
+            promptUser();
+        })
+        .catch(err => {
+            throw err;
+        });
+};*/
+
+// function to view employees by department
+const viewByDepartment = () => {
+
+};
+
+// function to delete department
+const deleteDepartment = () => {
+    const departmentsArray = [];
+    getDepartments()
+        .then(results => {
+            departmentsArray.push(...results);
+            return results;
+        })
+        .then(results => {
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: "Which department do you want to delete?",
+                    choices: mapArray('department', results)
+                },
+            ])
+        })
+        .then(input => {
+            const departmentId = findId('department', departmentsArray, input.department);
+            const query = `DELETE FROM departments WHERE id = ?`;
+            db.promise().query(query, departmentId)
+                .then(() => {
+                    console.log(`Deleted ${input.department} from the database.`);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })
+        .catch(err => {
+            throw err;
+        });
+};
+
 // prompt for menu with list of choices
 const promptUser = () => {
     return inquirer.prompt(menu)
@@ -473,6 +533,21 @@ const promptUser = () => {
                 break;
             case 'Update Employee Manager':
                 updateManager();
+                break;
+            case 'View Employees By Manager':
+                viewByManager();
+                break;
+            case 'View Employees By Department':
+                viewByDepartment();
+                break;
+            case 'Delete Department':
+                deleteDepartment();
+                break;
+            case 'Delete Role':
+                break;
+            case 'Delete Employee':
+                break;
+            case 'View Total Budget Of Department':
                 break;
             case 'Quit':
                 // exit from node.js
