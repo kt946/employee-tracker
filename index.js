@@ -456,12 +456,15 @@ const viewByDepartment = () => {
 // function to delete department, role, or employee
 const deleteFromDatabase = type => {
     const resultsArray = [];
+    // get data from table
     getData(`${type}s`)
         .then(results => {
+            // push results to array
             resultsArray.push(...results);
             return results;
         })
         .then(results => {
+            // prompt user for selection
             return inquirer.prompt([
                 {
                     type: 'list',
@@ -472,6 +475,7 @@ const deleteFromDatabase = type => {
             ])
         })
         .then(input => {
+            // get id and delete from database
             const query = `DELETE FROM ${type}s WHERE id = ?`;
             db.promise().query(query, findId(`${type}`, resultsArray, input.delete))
                 .then(() => {
@@ -486,6 +490,50 @@ const deleteFromDatabase = type => {
             throw err;
         });
 };
+
+// function to view department budget
+const viewBudget = () => {
+    // set up departments array
+    const departmentsArray = [];
+    getData('departments')
+        .then(results => {
+            departmentsArray.push(...results);
+        })
+        .then(() => {
+            // prompt user for department to view budget
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: 'Select a department to view its budget',
+                    choices: mapArray('department', departmentsArray)
+                }
+            ])
+        })
+        .then(input => {
+            // find department id
+            const departmentId = findId('department', departmentsArray, input.department);
+            // select only department name and sum of salary
+            // join tables by role ids and department ids
+            const query = `SELECT departments.name as department, SUM(salary) as 'total budget'
+                            FROM employees
+                            INNER JOIN roles ON employees.role_id = roles.id
+                            INNER JOIN departments ON roles.department_id = departments.id
+                            WHERE departments.id = ?`;
+            db.promise().query(query, departmentId)
+                .then(([rows, fields]) => {
+                    console.log('\n');
+                    console.table(rows);
+                    promptUser();
+                })
+                .catch(err => {
+                    throw err;
+                });
+        })   
+        .catch(err => {
+            throw err;
+        });
+}
 
 // prompt for menu with list of choices
 const promptUser = () => {
@@ -532,6 +580,7 @@ const promptUser = () => {
                 deleteFromDatabase('employee');
                 break;
             case 'View Total Budget Of Department':
+                viewBudget();
                 break;
             case 'Quit':
                 // exit from node.js
