@@ -1,6 +1,8 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
 const cTable = require('console.table');
+// helper functions
+const {findId, mapArray, getData} = require('./src/helper');
 
 // Connect to database
 const db = mysql.createConnection(
@@ -19,53 +21,6 @@ const db = mysql.createConnection(
         ================
     `)
 );
-
-// function to find id from array
-const findId = (type, arrayData, input) => {
-    // switch case for type of id to return from array and input
-    switch (type) {
-        // get id of department
-        case 'department':
-            return arrayData.find(arrayEl => arrayEl.name === input).id;
-        // get id of role
-        case 'role':
-            return arrayData.find(arrayEl => arrayEl.title === input).id;
-        // get id of employee
-        case 'employee':
-            // if employee's manager set to 'None'
-            if (input === 'None') {
-                return null;
-            }
-            return arrayData.find(arrayEl => arrayEl.first_name + ' ' + arrayEl.last_name === input).id;
-    };
-};
-
-// function to destructure results and return array for inquirer choices
-const mapArray = (type, arrayData) => {
-    // switch case for type of array to return
-    switch (type) {
-        // get array of department names
-        case 'department':
-            return arrayData.map(({name}) => name);
-        // get array of role names
-        case 'role':
-            return arrayData.map(({title}) => title);
-        // get array of employee names
-        case 'employee':
-            return arrayData.map(({ first_name , last_name }) => first_name + ' ' + last_name);
-    };
-}
-
-// function to return data from tables
-const getData = type => {
-    return db.promise().query(`SELECT * FROM ${type}`)
-        .then(([rows, fields])  => {
-            return rows;
-        })
-        .catch(err => {
-            console.log(err);
-        });
-};
 
 // function to view all departments
 const viewDepartments = () => {
@@ -516,6 +471,7 @@ const updateManager = () => {
 };
 
 // function to delete department, role, or employee
+// pass 'department', 'role', or 'employee' string as argument for type
 const deleteFromDatabase = type => {
     const resultsArray = [];
     // get data from table
