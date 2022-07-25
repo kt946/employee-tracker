@@ -20,34 +20,9 @@ const db = mysql.createConnection(
     `)
 );
 
-// menu question
-const menu = [
-    {
-        type: 'list',
-        name: 'selection',
-        message: 'What would you like to do?',
-        choices: [
-            'View All Departments',
-            'View All Roles',
-            'View All Employees',
-            'Add Department',
-            'Add Role',
-            'Add Employee', 
-            'Update Employee Role',
-            'Update Employee Manager',
-            'View Employees By Manager',
-            'View Employees By Department',
-            'Delete Department',
-            'Delete Role',
-            'Delete Employee',
-            'View Total Budget Of Department',
-            'Quit'
-        ]
-    }
-];
-
-// function to find id
+// function to find id from array
 const findId = (type, arrayData, input) => {
+    // switch case for type of id to return from array and input
     switch (type) {
         // get id of department
         case 'department':
@@ -65,8 +40,9 @@ const findId = (type, arrayData, input) => {
     };
 };
 
-// function to destructure and map array
+// function to destructure results and return array for inquirer choices
 const mapArray = (type, arrayData) => {
+    // switch case for type of array to return
     switch (type) {
         // get array of department names
         case 'department':
@@ -80,18 +56,28 @@ const mapArray = (type, arrayData) => {
     };
 }
 
+// function to return data from tables
+const getData = type => {
+    return db.promise().query(`SELECT * FROM ${type}`)
+        .then(([rows, fields])  => {
+            return rows;
+        })
+        .catch(err => {
+            console.log(err);
+        });
+};
+
 // function to view all departments
 const viewDepartments = () => {
     const query = `SELECT * FROM departments ORDER BY id`;
-    db.promise().query(query)
-        .then(([rows, fields]) => {
-            console.log('\n');
-            console.table(rows);
-            promptUser();
-        })
-        .catch(err => {
-            throw err;
-        });
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+        }
+        console.log('\n');
+        console.table(results);
+        promptUser();
+    });
 };
 
 // function to view all roles
@@ -102,15 +88,14 @@ const viewRoles = () => {
                     LEFT JOIN departments
                     ON roles.department_id = departments.id
                     ORDER BY id`;
-    db.promise().query(query)
-        .then(([rows, fields]) => {
-            console.log('\n');
-            console.table(rows);
-            promptUser();
-        })
-        .catch(err => {
-            throw err;
-        });
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+        }
+        console.log('\n');
+        console.table(results);
+        promptUser();
+    });
 };
 
 // function to view all employees
@@ -124,14 +109,134 @@ const viewEmployees = () => {
                     INNER JOIN departments ON roles.department_id = departments.id
                     LEFT JOIN employees AS manager ON employees.manager_id = manager.id
                     ORDER BY id`;
-    db.promise().query(query)
-        .then(([rows, fields]) => {
-            console.log('\n');
-            console.table(rows);
-            promptUser();
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+        }
+        console.log('\n');
+        console.table(results);
+        promptUser();
+    });
+};
+
+// function to view employees by manager
+const viewByManager = () => {
+    // select manager full name and employee first and last names
+    // order by manager last name
+    const query = `SELECT CONCAT(manager.first_name, ' ', manager.last_name) AS manager,
+                    employees.first_name, employees.last_name
+                    FROM employees
+                    INNER JOIN employees manager ON employees.manager_id = manager.id
+                    ORDER BY manager.last_name`;
+    db.query(query, (err, results) => {
+        if (err) {
+            console.log(err);
+        }
+        console.log('\n');
+        if (!results.length) {
+            console.log('No Managers Found.\n');
+        } else {
+            console.table(results);
+        }
+        promptUser();
+    });
+};
+
+// function to view employees by department
+const viewByDepartment = () => {
+    // set up departments array
+    const departmentsArray = [];
+    // get data, push results to array
+    getData('departments')
+        .then(results => {
+            departmentsArray.push(...results);
+
+            // prompt user for department to view its employees
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: 'Select a department to view its employees',
+                    choices: mapArray('department', results)
+                }
+            ])
         })
+        .then(input => {
+            // find department id
+            const departmentId = findId('department', departmentsArray, input.department);
+            // select only department name and employee first and last names and title
+            // order by employee last name
+            const query = `SELECT departments.name as department, 
+                            employees.first_name, employees.last_name,
+                            roles.title
+                            FROM employees
+                            INNER JOIN roles ON employees.role_id = roles.id
+                            INNER JOIN departments ON roles.department_id = departments.id
+                            WHERE departments.id = ?
+                            ORDER BY employees.last_name`;
+            db.query(query, departmentId, (err, results) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log('\n');
+                if (!results.length) {
+                    console.log('No Employees Found.\n');
+                } else {
+                    console.table(results);
+                }
+                promptUser();
+            });
+        })   
         .catch(err => {
-            throw err;
+            console.log(err);
+        });
+};
+
+// function to view department budget
+const viewBudget = () => {
+    // set up departments array
+    const departmentsArray = [];
+    // get data, push results to array
+    getData('departments')
+        .then(results => {
+            departmentsArray.push(...results);
+        
+            // prompt user for department to view budget
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'department',
+                    message: 'Select a department to view its total budget',
+                    choices: mapArray('department', results)
+                }
+            ])
+        })
+        .then(input => {
+            // find department id
+            const departmentId = findId('department', departmentsArray, input.department);
+            // select department name and sum of salary
+            // join tables by role ids and department ids
+            const query = `SELECT departments.name as department, SUM(salary) as total_budget
+                            FROM employees
+                            INNER JOIN roles ON employees.role_id = roles.id
+                            INNER JOIN departments ON roles.department_id = departments.id
+                            WHERE departments.id = ?`;
+            db.query(query, departmentId, (err, results) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log('\n');
+                const [ result ] = results;
+                if (!result.total_budget) {
+                    console.log('No Budget Found.\n');
+                } else {
+                    console.table(results);
+                }
+                promptUser();
+            });
+        })   
+        .catch(err => {
+            console.log(err);
         });
 };
 
@@ -144,56 +249,40 @@ const addDepartment = () => {
             name: 'department',
             message: 'What is the name of the department?',
             validate: departmentInput => {
-                if (departmentInput) {
-                    return true;
-                } else {
+                if (!departmentInput) {
                     console.log('Please enter a valid department name!');
-                    return false;
+                    return false;   
                 }
+                return true;
             }
         }
     ])
         .then(input => {
             // set user input as parameter for query
-            const params = input.department;
             const query = `INSERT INTO departments (name)
                             VALUES (?)`;
-            db.promise().query(query, params)
-                .then(() => {
-                    console.log(`Added ${params} to the database.`);
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
+            db.query(query, input.department, (err, result) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log(`Added ${input.department} to the database.`);
+                promptUser();
+            });
         })
         .catch(err => {
-            throw err;
+            console.lot(err);
         });
 }
-
-// function to get data from tables
-const getData = (type) => {
-    return db.promise().query(`SELECT * FROM ${type}`)
-        .then(([rows, fields])  => {
-            return rows;
-        })
-        .catch(err => {
-            throw err;
-        });
-};
 
 // function to add a role
 const addRole = () => {
     // set up results array for department id and names
     const departmentsArray = [];
-    // get all departments, push results to array
+    // get data, push results to array
     getData('departments')
         .then(results => {
-            // push to array to find id for department after prompt
             departmentsArray.push(...results);
-        })
-        .then(() => {
+        
             // prompt user for role name, salary, department
             return inquirer.prompt([
                 {
@@ -201,12 +290,11 @@ const addRole = () => {
                     name: 'role',
                     message: 'What is the name of the role?',
                     validate: roleInput => {
-                        if (roleInput) {
-                            return true;
-                        } else {
+                        if (!roleInput) {
                             console.log('Please enter a valid role name!');
                             return false;
-                        }
+                        } 
+                        return true;
                     }
                 },
                 {
@@ -219,7 +307,7 @@ const addRole = () => {
                     name: 'department',
                     message: 'Which department does the role belong to?',
                     // print all department names from array
-                    choices: mapArray('department', departmentsArray)
+                    choices: mapArray('department', results)
                 }
             ])
         })
@@ -230,17 +318,16 @@ const addRole = () => {
             const params = [input.role, input.salary, departmentId];
             const query = `INSERT INTO roles (title, salary, department_id)
                             VALUES (?,?,?)`;
-            db.promise().query(query, params)
-                .then(() => {
-                    console.log(`Added ${input.role} to the database.`);
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
+            db.query(query, params, (err, result) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log(`Added ${input.role} to the database.`);
+                promptUser();
+            });
         })   
         .catch(err => {
-            throw err;
+            console.log(err);
         });
 };
 
@@ -249,7 +336,7 @@ const addEmployee = () => {
     // set up arrays for roles and managers data
     const roleArray = [];
     const managerArray = [];
-    // get roles and employees, push results to roles and managers array
+    // get data, push results to arrays
     getData('roles')
         .then(results => {
             roleArray.push(...results);
@@ -270,12 +357,11 @@ const addEmployee = () => {
                     name: 'first_name',
                     message: "What is the employee's first name?",
                     validate: nameInput => {
-                        if (nameInput) {
-                            return true;
-                        } else {
+                        if (!nameInput) {
                             console.log('Please enter a valid first name!');
                             return false;
-                        }
+                        } 
+                        return true;
                     }
                 },
                 {
@@ -283,12 +369,11 @@ const addEmployee = () => {
                     name: 'last_name',
                     message: "What is the employee's last name?",
                     validate: nameInput => {
-                        if (nameInput) {
-                            return true;
-                        } else {
+                        if (!nameInput) {
                             console.log('Please enter a valid last name!');
                             return false;
                         }
+                        return true;
                     }
                 },
                 {
@@ -315,17 +400,16 @@ const addEmployee = () => {
             const params = [input.first_name, input.last_name, roleId, managerId];
             const query = `INSERT INTO employees (first_name, last_name, role_id, manager_id)
                             VALUES (?,?,?,?)`;
-            db.promise().query(query, params)
-                .then(() => {
-                    console.log(`Added ${input.first_name} ${input.last_name} to the database.`);
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
+            db.query(query, params, (err, result) => {
+                if (err) {
+                    console.log(err);
+                }
+                console.log(`Added ${input.first_name} ${input.last_name} to the database.`);
+                promptUser();
+            });
         })
         .catch(err => {
-            throw err;
+            console.log(err);
         });
 };
 
@@ -334,17 +418,17 @@ const updateEmployee = () => {
     // set up arrays for roles and employees data 
     const roleArray = [];
     const employeeArray = [];
+    // get data, push results to arrays
     getData('roles')
         .then(results => {
             roleArray.push(...results);
-        })
-        .then(() => {
+        
             return getData('employees');
         })
         .then(results => {
             employeeArray.push(...results);
-        })
-        .then(() => {
+        
+            //prompt to update employee's roles
             return inquirer.prompt([
                 {
                     type: 'list',
@@ -370,17 +454,16 @@ const updateEmployee = () => {
             const params = [roleId, employeeId];
             const query = `UPDATE employees SET role_id = ?
                             WHERE id = ?`;
-            db.promise().query(query, params)
-                .then(() => {
-                    console.log(`Updated ${input.employee}'s role to ${input.role}.`);
+            db.query(query, params, (err, result) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log(`Updated ${input.employee}'s role to ${input.role}.`);
                     promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
+            });
         })
         .catch(err => {
-            throw err;
+            console.log(err);
         });
 };
 
@@ -419,93 +502,16 @@ const updateManager = () => {
             const params = [managerId, employeeId];
             const query = `UPDATE employees SET manager_id = ?
                             WHERE id = ?`;
-            db.promise().query(query, params)
-                .then(() => {
-                    console.log(`Updated ${input.employee}'s manager to ${input.manager}.`);
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
-        })
-        .catch(err => {
-            throw err;
-        });
-};
-
-// function to view employees by manager
-const viewByManager = () => {
-    // select manager full name and employee first and last names
-    // // Order by manager last name
-    const query = `SELECT CONCAT(manager.first_name, ' ', manager.last_name) AS manager,
-                    employees.first_name, employees.last_name
-                    FROM employees
-                    INNER JOIN employees manager ON employees.manager_id = manager.id
-                    ORDER BY manager.last_name`;
-    db.promise().query(query)
-        .then(([rows, fields]) => {
-            console.log('\n');
-            if (!rows.length) {
-                console.log('No Managers Found.');
-                console.log('\n');
-            } else {
-                console.table(rows);
-            }
-            promptUser();
-        })
-        .catch(err => {
-            throw err;
-        });
-};
-
-// function to view employees by department
-const viewByDepartment = () => {
-    const departmentsArray = [];
-    getData('departments')
-        .then(results => {
-            departmentsArray.push(...results);
-        })
-        .then(() => {
-            // prompt user for department to view its employees
-            return inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'department',
-                    message: 'Select a department to view its employees',
-                    choices: mapArray('department', departmentsArray)
+            db.query(query, params, (err, result) => {
+                if (err) {
+                    throw (err);
                 }
-            ])
+                console.log(`Updated ${input.employee}'s manager to ${input.manager}.`);
+                promptUser();
+            });
         })
-        .then(input => {
-            // find department id
-            const departmentId = findId('department', departmentsArray, input.department);
-            // select only department name and employee first and last names and title
-            // Order by employee last name
-            const query = `SELECT departments.name as department, 
-                            employees.first_name, employees.last_name,
-                            roles.title
-                            FROM employees
-                            INNER JOIN roles ON employees.role_id = roles.id
-                            INNER JOIN departments ON roles.department_id = departments.id
-                            WHERE departments.id = ?
-                            ORDER BY employees.last_name`;
-            db.promise().query(query, departmentId)
-                .then(([rows, fields]) => {
-                    console.log('\n');
-                    if (!rows.length) {
-                        console.log('No Employees Found.');
-                        console.log('\n');
-                    } else {
-                        console.table(rows);
-                    }
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
-        })   
         .catch(err => {
-            throw err;
+            console.log(err);
         });
 };
 
@@ -532,70 +538,46 @@ const deleteFromDatabase = type => {
         })
         .then(input => {
             // get id and delete from database
+            const params = [findId(`${type}`, resultsArray, input.delete)]
             const query = `DELETE FROM ${type}s WHERE id = ?`;
-            db.promise().query(query, findId(`${type}`, resultsArray, input.delete))
-                .then(() => {
-                    console.log(`Deleted ${input.delete} ${type} from the database.`);
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
+            db.query(query, params, (err, result) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log(`Deleted ${input.delete} ${type} from the database.`);
+                promptUser();
+            });
         })
         .catch(err => {
-            throw err;
+            console.log(err);
         });
 };
 
-// function to view department budget
-const viewBudget = () => {
-    // set up departments array
-    const departmentsArray = [];
-    getData('departments')
-        .then(results => {
-            departmentsArray.push(...results);
-        })
-        .then(() => {
-            // prompt user for department to view budget
-            return inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'department',
-                    message: 'Select a department to view its total budget',
-                    choices: mapArray('department', departmentsArray)
-                }
-            ])
-        })
-        .then(input => {
-            // find department id
-            const departmentId = findId('department', departmentsArray, input.department);
-            // select department name and sum of salary
-            // join tables by role ids and department ids
-            const query = `SELECT departments.name as department, SUM(salary) as total_budget
-                            FROM employees
-                            INNER JOIN roles ON employees.role_id = roles.id
-                            INNER JOIN departments ON roles.department_id = departments.id
-                            WHERE departments.id = ?`;
-            db.promise().query(query, departmentId)
-                .then(([rows, fields]) => {
-                    console.log('\n');
-                    const [ result ] = rows;
-                    if (!result.total_budget) {
-                        console.log('No Budget Found.');
-                        console.log('\n');
-                    } else {
-                        console.table(rows);
-                    }
-                    promptUser();
-                })
-                .catch(err => {
-                    throw err;
-                });
-        })   
-        .catch(err => {
-            throw err;
-        });
-}
+// menu question
+const menu = [
+    {
+        type: 'list',
+        name: 'selection',
+        message: 'What would you like to do?',
+        choices: [
+            'View All Departments',
+            'View All Roles',
+            'View All Employees',
+            'View Employees By Manager',
+            'View Employees By Department',
+            'View Total Budget Of Department',
+            'Add Department',
+            'Add Role',
+            'Add Employee', 
+            'Update Employee Role',
+            'Update Employee Manager',
+            'Delete Department',
+            'Delete Role',
+            'Delete Employee',
+            'Quit'
+        ]
+    }
+];
 
 // prompt for menu with list of choices
 const promptUser = () => {
@@ -610,6 +592,15 @@ const promptUser = () => {
                 break;
             case 'View All Employees':
                 viewEmployees();
+                break;
+            case 'View Employees By Manager':
+                viewByManager();
+                break;
+            case 'View Employees By Department':
+                viewByDepartment();
+                break;
+            case 'View Total Budget Of Department':
+                viewBudget();
                 break;
             case 'Add Department':
                 addDepartment();
@@ -626,12 +617,6 @@ const promptUser = () => {
             case 'Update Employee Manager':
                 updateManager();
                 break;
-            case 'View Employees By Manager':
-                viewByManager();
-                break;
-            case 'View Employees By Department':
-                viewByDepartment();
-                break;
             case 'Delete Department':
                 deleteFromDatabase('department');
                 break;
@@ -640,9 +625,6 @@ const promptUser = () => {
                 break;
             case 'Delete Employee':
                 deleteFromDatabase('employee');
-                break;
-            case 'View Total Budget Of Department':
-                viewBudget();
                 break;
             case 'Quit':
                 // exit from node.js
@@ -654,7 +636,4 @@ const promptUser = () => {
 };
 
 // initialize prompt
-promptUser()
-    .catch(err => {
-        console.log(err);
-    });
+promptUser();
