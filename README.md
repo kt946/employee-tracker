@@ -21,9 +21,9 @@ To install this application:
 - Ensure that MySQL is installed on your computer.
 - Open a command-line interface (VS Code, Git Bash, etc.) and navigate to the directory containing the application's index.js.
 - In the command-line, type 'npm install' or 'npm i' to download the application's dependencies, which include:
-  - Inquirer v8.2.4
-  - MySQL2
-  - console.table
+  - [Inquirer v8.2.4 package](https://www.npmjs.com/package/inquirer/v/8.2.4)
+  - [MySQL2 package](https://www.npmjs.com/package/mysql2)
+  - [console.table package](https://www.npmjs.com/package/console.table)
 - Once the dependencies are installed, type 'mysql -u root -p' into the terminal. When prompted, input the password for the MySQL Shell to connect to the database.
 - Type 'source db/schema.sql' and 'source db/seeds.sql' to create the database, tables, and seeds. This step can also be repeated to reset the data.
 - To exit the MySQL Shell, type 'quit' and you will return to the command-line.
