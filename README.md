@@ -51,6 +51,8 @@ To use this application:
     - Quit
 - Selecting the 'Quit' option will end the application and return you to the command-line. To start the application again, type 'node index.js' or 'node index'.
 
+https://user-images.githubusercontent.com/103476893/180713166-01dda4b7-0710-42cd-98b6-cb38fb3e2a2a.mp4
+
 ## License
 
 This application is covered under the [MIT](https://opensource.org/licenses/MIT).
