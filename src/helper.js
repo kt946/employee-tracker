@@ -62,8 +62,21 @@ const getData = type => {
         });
 };
 
+// function to return list of employees that are managers
+const getManagerList = (employeeData) => {
+    // filter array for employees that have managers
+    const employeesWithManagers = employeeData.filter(employee => employee.manager_id);
+            
+    // get array of manager ids
+    const managerIdData = employeesWithManagers.map(({ manager_id }) => manager_id);
+    
+    // filter array for employees that are managers
+    return employeeData.filter(employee => managerIdData.includes(employee.id));
+};
+
 module.exports = {
     findId,
     mapArray,
-    getData
+    getData,
+    getManagerList
 }

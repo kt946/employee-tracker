@@ -2,7 +2,7 @@ const inquirer = require('inquirer');
 const mysql = require('mysql2');
 const cTable = require('console.table');
 // helper functions
-const {findId, mapArray, getData} = require('./src/helper');
+const {findId, mapArray, getData, getManagerList} = require('./src/helper');
 
 // Connect to database
 const db = mysql.createConnection(
@@ -22,41 +22,21 @@ const db = mysql.createConnection(
     `)
 );
 
-// function to view all departments
-const viewDepartments = () => {
-    const query = `SELECT * FROM departments ORDER BY id`;
-    db.query(query, (err, results) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log('\n');
-        console.table(results);
-        promptUser();
-    });
-};
-
-// function to view all roles
-const viewRoles = () => {
-    const query = `SELECT roles.id, roles.title, 
+// function to return queries for view function
+// returns query with specific formatting based on string that is passed through
+const getQuery = type => {
+    switch (type) {
+        case 'departments':
+            return `SELECT * FROM departments ORDER BY id`;
+        case 'roles':
+            return `SELECT roles.id, roles.title, 
                     departments.name AS department, roles.salary 
                     FROM roles
                     LEFT JOIN departments
                     ON roles.department_id = departments.id
                     ORDER BY id`;
-    db.query(query, (err, results) => {
-        if (err) {
-            console.log(err);
-        }
-        console.log('\n');
-        console.table(results);
-        promptUser();
-    });
-};
-
-// function to view all employees
-const viewEmployees = () => {
-    // self referencing foreign key
-    const query = `SELECT employees.id, employees.first_name, employees.last_name,
+        case 'employees':
+            return `SELECT employees.id, employees.first_name, employees.last_name,
                     roles.title, departments.name AS department, roles.salary, 
                     CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
                     FROM employees
@@ -64,6 +44,14 @@ const viewEmployees = () => {
                     INNER JOIN departments ON roles.department_id = departments.id
                     LEFT JOIN employees AS manager ON employees.manager_id = manager.id
                     ORDER BY id`;
+    }
+};
+
+// function to view data based on type of string passed through
+// pass 'departments', 'roles', or 'employees' string as argument for type
+const viewData = type => {
+    // function to return specific query
+    const query = getQuery(type);
     db.query(query, (err, results) => {
         if (err) {
             console.log(err);
@@ -76,25 +64,52 @@ const viewEmployees = () => {
 
 // function to view employees by manager
 const viewByManager = () => {
-    // select manager full name and employee first and last names
-    // order by manager last name
-    const query = `SELECT CONCAT(manager.first_name, ' ', manager.last_name) AS manager,
-                    employees.first_name, employees.last_name
-                    FROM employees
-                    INNER JOIN employees manager ON employees.manager_id = manager.id
-                    ORDER BY manager.last_name`;
-    db.query(query, (err, results) => {
-        if (err) {
+    // set up manager array
+    const managerArray = [];
+    // get employee data
+    getData('employees')
+        .then(results => {
+            // push data to array
+            managerArray.push(...results);
+
+            // return array of employees that are managers
+            return getManagerList(results);
+        })
+        .then(managerList => {
+            return inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'manager',
+                    message: 'Select a manager to view employees under them',
+                    choices: mapArray('employee', managerList)
+                }
+            ])
+        })
+        .then(input => {
+            // find manager id
+            const managerId = findId('employee', managerArray, input.manager);
+            // display only employees that have the selected manager 
+            const query = `SELECT employees.id, employees.first_name, employees.last_name,
+                            roles.title, departments.name AS department, roles.salary, 
+                            CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
+                            FROM employees
+                            INNER JOIN roles ON roles.id = employees.role_id
+                            INNER JOIN departments ON roles.department_id = departments.id
+                            LEFT JOIN employees AS manager ON employees.manager_id = manager.id
+                            WHERE manager.id = ?
+                            ORDER BY id`;
+            db.query(query, managerId, (err, results) => {
+                if (err) {
+                    throw (err);
+                }
+                console.log('\n');
+                console.table(results);
+                promptUser();
+            });
+        })   
+        .catch(err => {
             console.log(err);
-        }
-        console.log('\n');
-        if (!results.length) {
-            console.log('No Managers Found.\n');
-        } else {
-            console.table(results);
-        }
-        promptUser();
-    });
+        });
 };
 
 // function to view employees by department
@@ -121,14 +136,15 @@ const viewByDepartment = () => {
             const departmentId = findId('department', departmentsArray, input.department);
             // select only department name and employee first and last names and title
             // order by employee last name
-            const query = `SELECT departments.name as department, 
-                            employees.first_name, employees.last_name,
-                            roles.title
+            const query = `SELECT employees.id, employees.first_name, employees.last_name,
+                            roles.title, departments.name AS department, roles.salary, 
+                            CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
                             FROM employees
-                            INNER JOIN roles ON employees.role_id = roles.id
+                            INNER JOIN roles ON roles.id = employees.role_id
                             INNER JOIN departments ON roles.department_id = departments.id
+                            LEFT JOIN employees AS manager ON employees.manager_id = manager.id
                             WHERE departments.id = ?
-                            ORDER BY employees.last_name`;
+                            ORDER BY id`;
             db.query(query, departmentId, (err, results) => {
                 if (err) {
                     throw (err);
@@ -414,7 +430,7 @@ const updateEmployee = () => {
                     throw (err);
                 }
                 console.log(`Updated ${input.employee}'s role to ${input.role}.`);
-                    promptUser();
+                promptUser();
             });
         })
         .catch(err => {
@@ -510,30 +526,28 @@ const deleteFromDatabase = type => {
 };
 
 // menu question
-const menu = [
-    {
-        type: 'list',
-        name: 'selection',
-        message: 'What would you like to do?',
-        choices: [
-            'View All Departments',
-            'View All Roles',
-            'View All Employees',
-            'View Employees By Manager',
-            'View Employees By Department',
-            'View Total Budget Of Department',
-            'Add Department',
-            'Add Role',
-            'Add Employee', 
-            'Update Employee Role',
-            'Update Employee Manager',
-            'Delete Department',
-            'Delete Role',
-            'Delete Employee',
-            'Quit'
-        ]
-    }
-];
+const menu = {
+    type: 'list',
+    name: 'selection',
+    message: 'What would you like to do?',
+    choices: [
+        'View All Departments',
+        'View All Roles',
+        'View All Employees',
+        'View Employees By Manager',
+        'View Employees By Department',
+        'View Total Budget Of Department',
+        'Add Department',
+        'Add Role',
+        'Add Employee', 
+        'Update Employee Role',
+        'Update Employee Manager',
+        'Delete Department',
+        'Delete Role',
+        'Delete Employee',
+        'Quit'
+    ]
+};
 
 // prompt for menu with list of choices
 const promptUser = () => {
@@ -541,13 +555,13 @@ const promptUser = () => {
     .then(menu => {
         switch (menu.selection) {
             case 'View All Departments':
-                viewDepartments();
+                viewData('departments');
                 break;
             case 'View All Roles':
-                viewRoles();
+                viewData('roles');
                 break;
             case 'View All Employees':
-                viewEmployees();
+                viewData('employees');
                 break;
             case 'View Employees By Manager':
                 viewByManager();
