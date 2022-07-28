@@ -63,7 +63,7 @@ const getData = type => {
 };
 
 // function to return list of employees that are managers
-const getManagerList = (employeeData) => {
+const getManagerList = employeeData => {
     // filter array for employees that have managers
     const employeesWithManagers = employeeData.filter(employee => employee.manager_id);
             

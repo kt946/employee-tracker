@@ -135,7 +135,6 @@ const viewByDepartment = () => {
             // find department id
             const departmentId = findId('department', departmentsArray, input.department);
             // select only department name and employee first and last names and title
-            // order by employee last name
             const query = `SELECT employees.id, employees.first_name, employees.last_name,
                             roles.title, departments.name AS department, roles.salary, 
                             CONCAT(manager.first_name, ' ', manager.last_name) AS manager 
@@ -319,9 +318,7 @@ const addEmployee = () => {
             managerArray.push(...results);
             // print all employee names from array for manager choices
             const managerList = mapArray('employee', results);
-            return managerList;
-        })
-        .then(managerList => {
+            
             return inquirer.prompt([
                 {
                     type: 'input',
@@ -447,9 +444,7 @@ const updateManager = () => {
             employeeArray.push(...results);
             // print all employee names from array
             const employeeList = mapArray('employee', results);
-            return employeeList;
-        })
-        .then(employeeList => {
+            
             return inquirer.prompt([
                 {
                     type: 'list',
@@ -495,9 +490,7 @@ const deleteFromDatabase = type => {
         .then(results => {
             // push results to array
             resultsArray.push(...results);
-            return results;
-        })
-        .then(results => {
+
             // prompt user for selection
             return inquirer.prompt([
                 {
@@ -510,7 +503,7 @@ const deleteFromDatabase = type => {
         })
         .then(input => {
             // get id and delete from database
-            const params = [findId(`${type}`, resultsArray, input.delete)]
+            const params = findId(`${type}`, resultsArray, input.delete)
             const query = `DELETE FROM ${type}s WHERE id = ?`;
             db.query(query, params, (err, result) => {
                 if (err) {
